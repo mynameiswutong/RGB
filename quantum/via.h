@@ -78,9 +78,9 @@ enum via_command_id {
     id_dynamic_keymap_get_keycode           = 0x04,
     id_dynamic_keymap_set_keycode           = 0x05,
     id_dynamic_keymap_reset                 = 0x06,
-    /*id_lighting_set_value                   = 0x07,
+    id_lighting_set_value                   = 0x07,
     id_lighting_get_value                   = 0x08,
-    id_lighting_save                        = 0x09,*/
+    id_lighting_save                        = 0x09,
     id_custom_set_value                     = 0x07,
     id_custom_get_value                     = 0x08,
     id_custom_save                          = 0x09,
@@ -96,6 +96,14 @@ enum via_command_id {
     id_dynamic_keymap_set_buffer            = 0x13,
     id_dynamic_keymap_get_encoder           = 0x14,
     id_dynamic_keymap_set_encoder           = 0x15,
+    id_signalrgb_qmk_version                = 0x21,
+    id_signalrgb_protocol_version           = 0x22,
+    id_signalrgb_unique_identifier          = 0x23,
+    id_signalrgb_stream_leds                = 0x24,
+    id_signalrgb_effect_enable              = 0x25,
+    id_signalrgb_effect_disable             = 0x26,
+    id_signalrgb_total_leds                 = 0x27,
+    id_signalrgb_firmware_type              = 0x28,
     id_unhandled                            = 0xFF,
 };
 
@@ -231,8 +239,9 @@ enum user_keycodes {
 //extern bool g_signalrgb_enabled;
 
 void via_openrgb_enabled(void);
-void via_openrgb_disbled(void);
+void via_openrgb_disabled(void);
 void via_signalrgb_enabled(void);
+void via_signalrgb_disabled(void);
 
 // Can be called in an overriding via_init_kb() to test if keyboard level code usage of
 // EEPROM is invalid and use/save defaults.
@@ -257,7 +266,7 @@ void     via_set_layout_options_kb(uint32_t value);
 void via_set_device_indication(uint8_t value);
 
 //Used to handle OpenRGB Compatibility
-extern RGB g_openrgb_direct_mode_colors[DRIVER_LED_TOTAL];
+//extern RGB g_openrgb_direct_mode_colors[DRIVER_LED_TOTAL];
 
 // void openrgb_get_protocol_version(void);
 // void openrgb_get_qmk_verwsion(void);

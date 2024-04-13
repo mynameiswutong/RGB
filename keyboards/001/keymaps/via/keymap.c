@@ -3,6 +3,7 @@
 enum custom_keycodes {
     OP_MOD = SAFE_RANGE, // openRGB toggle 0x5db1
     SR_MOD, //0x5db2
+    //SW_RMOD
 };
 #define DRIVER_LED_TOTAL 100
 /*
@@ -91,29 +92,69 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     //static uint32_t key_timer;
 
     switch (keycode) {
-        case OP_MOD:{
+        case OP_MOD:
             if (record->event.pressed) {
                 via_openrgb_enabled();
             }
             return false;
-        }
-        case SR_MOD:{
+        
+        case SR_MOD:
             if (record->event.pressed) {
             #ifdef SIGNALRGB_SUPPORT_ENABLE
                 via_signalrgb_enabled();
             #endif
             }
             return false;
-        }
-        case RGB_MOD:{
+        
+        case RGB_MOD:
             if (record->event.pressed) {
-                via_openrgb_disbled();
-                rgb_matrix_step_noeeprom();
+                via_openrgb_disabled();
+                via_signalrgb_disabled();
+                rgb_matrix_step_noeeprom();     //Change the mode to the next RGB animation in the list of enabled RGB animations
             }
             return false;
-        }
-        return false;
-        default:
-            return true; //Process all other keycodes normally
+        
     }
+
+    return true; //处理其他按键建码
 }
+
+/*
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    static uint8_t sw_rmod_press_count = 0;
+
+    switch (keycode) {
+        case SW_RMOD: // 自定义按键 SW_RMOD
+            if (record->event.pressed) {
+                sw_rmod_press_count++; // 每次按下增加计数
+
+                switch (sw_rmod_press_count) { // 根据计数确定触发的功能
+                    case 1:
+                    #ifdef OPENRGB_ENABLE
+                        via_openrgb_enabled(); // 第一次按下触发 OP_MOD
+                    #endif
+                        break;
+
+                    case 2:
+                    #ifdef SIGNALRGB_SUPPORT_ENABLE
+                        via_signalrgb_enabled(); // 第二次按下触发 SR_MOD
+                    #endif
+                        break;
+
+                    case 3:
+                        via_openrgb_disabled(); // 第三次按下触发 RGB_MOD
+                        via_signalrgb_disabled();
+                        rgb_matrix_step_noeeprom();
+                        break;
+                }
+
+                if (sw_rmod_press_count >= 3) {
+                    sw_rmod_press_count = 0; // 重置计数器，重新从第一个功能开始循环
+                }
+            }
+            return false;
+    }
+
+    return true; // 处理其他按键建码
+}
+*/

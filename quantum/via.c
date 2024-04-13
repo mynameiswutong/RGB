@@ -23,7 +23,7 @@
 #endif
 
 #include "via.h"
-
+#include "protocol/host.h"      //新增
 #include "raw_hid.h"
 #include "dynamic_keymap.h"
 #include "eeprom.h"
@@ -224,7 +224,7 @@ bool process_record_via(uint16_t keycode, keyrecord_t *record) {
         }
     }
 
-    //修改开始
+    /*//修改开始
     // TODO: ideally this would be generalized and refactored into
     // QMK core as advanced keycodes, until then, the simple case
     // can be available here to keyboards using VIA
@@ -250,16 +250,16 @@ bool process_record_via(uint16_t keycode, keyrecord_t *record) {
             return false;
             break;
     }
-    //修改结束
+    //修改结束*/
 
     return true;
 }
 
 //修改开始
-bool g_openrgb_enabled = false; //default signalrgb off
-//bool g_signalrgb_enabled = true; //default signalrgb on
+bool g_openrgb_enabled = false; //Used to switch OpenRGB on/off, default openRGB off
+bool g_signalrgb_enabled = false; //Used to switch SignalRGB on/off, default SignalRGB off
 
-void via_openrgb_disbled(void){
+void via_openrgb_disabled(void){
     #ifdef OPENRGB_ENABLE
         g_openrgb_enabled = false;
     #endif
@@ -267,15 +267,23 @@ void via_openrgb_disbled(void){
 
 void via_openrgb_enabled(void){
  #ifdef OPENRGB_ENABLE
-    rgb_matrix_mode_noeeprom(RGB_MATRIX_OPENRGB_DIRECT);
+    rgb_matrix_mode_noeeprom(RGB_MATRIX_OPENRGB_DIRECT);    //Set OPENRGB_DIRECT mode, (not written to EEPROM)
+    g_signalrgb_enabled = false;
     g_openrgb_enabled = true;
  #endif
 }
 
+void via_signalrgb_disabled(void){
+    #ifdef SIGNALRGB_SUPPORT_ENABLE
+        g_signalrgb_enabled = false;
+    #endif
+}
+
 void via_signalrgb_enabled(void){
  #ifdef SIGNALRGB_SUPPORT_ENABLE
-    rgb_matrix_mode_noeeprom(RGB_MATRIX_SIGNALRGB);
+    rgb_matrix_mode_noeeprom(RGB_MATRIX_SIGNALRGB);     //Set SIGNALRGB mode, (not written to EEPROM)
     g_openrgb_enabled = false;
+    g_signalrgb_enabled = true;
  #endif
 }
 
@@ -293,134 +301,17 @@ void via_signalrgb_enabled(void){
 // }
 
 // ------------------- signalrgb protocol ---------------------
- uint8_t packet[32];
 
- void get_qmk_version(void) //Grab the QMK Version
-{
-        packet[0] = id_signalrgb_qmk_version;
-        packet[1] = QMK_VERSION_BYTE_1;
-        packet[2] = QMK_VERSION_BYTE_2;
-        packet[3] = QMK_VERSION_BYTE_3;
-
-        raw_hid_send(packet, 32);
-}
-
-void get_signalrgb_protocol_version(void) //Grab what version of the SignalRGB protocol a keyboard is running
-{
-        packet[0] = id_signalrgb_protocol_version;
-        packet[1] = PROTOCOL_VERSION_BYTE_1;
-        packet[2] = PROTOCOL_VERSION_BYTE_2;
-        packet[3] = PROTOCOL_VERSION_BYTE_3;
-
-        raw_hid_send(packet, 32);
-}
-
-void get_unique_identifier(void) //Grab the unique identifier for each specific model of keyboard.
-{
-        packet[0] = id_signalrgb_unique_identifier;
-        packet[1] = DEVICE_UNIQUE_IDENTIFIER_BYTE_1;
-        packet[2] = DEVICE_UNIQUE_IDENTIFIER_BYTE_2;
-        packet[3] = DEVICE_UNIQUE_IDENTIFIER_BYTE_3;
-
-        raw_hid_send(packet, 32);
-}
-
-void led_streaming(uint8_t *data) //Stream data from HID Packets to Keyboard.
-{
-    uint8_t index = data[1];
-    uint8_t numberofleds = data[2]; 
-    #if defined(RGBLIGHT_ENABLE)
-        if(index + numberofleds > RGBLED_NUM) {
-    #elif defined(RGB_MATRIX_ENABLE)
-        if(index + numberofleds > RGB_MATRIX_LED_COUNT) {
-    #endif
-        packet[1] = DEVICE_ERROR_LED_BOUNDS;
-        raw_hid_send(packet,32);
-        return; 
-    }
-
-    if(numberofleds >= 10)
-    {
-        packet[1] = DEVICE_ERROR_LED_BOUNDS;
-        raw_hid_send(packet,32);
-        return; 
-    } 
-    
-    for (uint8_t i = 0; i < numberofleds; i++)
-    {
-      uint8_t offset = (i * 3) + 3;
-      uint8_t  r = data[offset];
-      uint8_t  g = data[offset + 1];
-      uint8_t  b = data[offset + 2];
-
-      //if ( ((index + i) == CAPS_LOCK_LED_INDEX && host_keyboard_led_state().caps_lock) || ((index + i) == NUM_LOCK_LED_INDEX && host_keyboard_led_state().num_lock) || ((index + i) == SCROLL_LOCK_LED_INDEX && host_keyboard_led_state().scroll_lock))   {
-      //if ( ((index + i) == CAPS_LOCK_LED_INDEX && host_keyboard_led_state().caps_lock) || ((index + i) == NUM_LOCK_LED_INDEX && host_keyboard_led_state().num_lock))   {
-      //if ( (index + i) == CAPS_MAC_WIN_LED_INDEX && host_keyboard_led_state().caps_lock)   {
-      //if ( (index + i) == CAPS_LOCK_LED_INDEX && host_keyboard_led_state().caps_lock)   {
-      //if ( (index + i) == NUM_LOCK_LED_INDEX && host_keyboard_led_state().num_lock)  {
-      //#if defined(RGBLIGHT_ENABLE)
-      //rgblight_setrgb_at(255, 255, 255, index + i);
-      //#elif defined(RGB_MATRIX_ENABLE)
-      //rgb_matrix_set_color(index + i, 255, 255, 255);
-      //#endif
-
-      //} else {
-      if ( (index + i) == CAPS_LOCK_LED_INDEX && host_keyboard_led_state().caps_lock) continue;
-      
-      #if defined(RGBLIGHT_ENABLE)
-      rgblight_setrgb_at(r, g, b, index + i);
-      #elif defined(RGB_MATRIX_ENABLE)
-      rgb_matrix_set_color(index + i, r, g, b);
-      #endif
-        }
-     }
-//}
-
-void signalrgb_mode_enable(void)
-{
-    #if defined(RGB_MATRIX_ENABLE)
-    rgb_matrix_toggle_noeeprom();
-    rgb_matrix_disable_noeeprom();
-    rgb_matrix_enable_noeeprom();
-    rgb_matrix_mode_noeeprom(RGB_MATRIX_SIGNALRGB); //Set RGB Matrix to SignalRGB Compatible Mode
-    #endif
-}
-
-void signalrgb_mode_disable(void)
-{
-    #if defined(RGBLIGHT_ENABLE)
-    rgblight_reload_from_eeprom();
-    #elif defined(RGB_MATRIX_ENABLE)
-    rgb_matrix_reload_from_eeprom(); //Reloading last effect from eeprom
-    #endif
-}
-
-void signalrgb_total_leds(void)//Grab total number of leds that a board has.
-{
-    packet[0] = id_signalrgb_total_leds;
-    #if defined(RGBLIGHT_ENABLE)
-    packet[1] = RGBLED_NUM;
-    #elif defined(RGB_MATRIX_ENABLE)
-    packet[1] = RGB_MATRIX_LED_COUNT;
-    #endif
-    raw_hid_send(packet,32);
-}
-
-void signalrgb_firmware_type(void) //Grab which fork of qmk a board is running.
-{
-    packet[0] = id_signalrgb_firmware_type;
-    packet[1] = FIRMWARE_TYPE_BYTE;
-    raw_hid_send(packet,32);
-}*/
 //------------------ signalrgb protocol ------------------
 
 
 // Keyboard level code can override this to handle custom messages from VIA.
 // See raw_hid_receive() implementation.
 // DO NOT call raw_hid_send() in the override function.
-__attribute__((weak)) void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
+//__attribute__((weak)) void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
+__attribute__((weak)) void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
     uint8_t *command_id = &(data[0]);
-    *command_id         = id_unhandled;
+    *command_id = id_unhandled;
 }
 
 // VIA handles received HID messages first, and will route to
@@ -430,7 +321,25 @@ __attribute__((weak)) void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
 //
 // raw_hid_send() is called at the end, with the same buffer, which was
 // possibly modified with returned values.
+
+#ifdef OPENRGB_ENABLE
+extern uint8_t is_orgb_mode;
+extern void orgb_raw_hid_receive(uint8_t *data, uint8_t length);
+#endif
+
 void raw_hid_receive(uint8_t *data, uint8_t length) {
+
+// NEW begin
+
+#ifdef OPENRGB_ENABLE
+ if (is_orgb_mode) {
+        orgb_raw_hid_receive(data, length);
+        return;
+ }
+#endif
+
+// NEW end 
+
 uint8_t *command_id   = &(data[0]);
 uint8_t *command_data = &(data[1]);
 
@@ -474,46 +383,59 @@ uint8_t *command_data = &(data[1]);
 
  //signalrgb HID command
 #ifdef SIGNALRGB_SUPPORT_ENABLE
-    switch (*command_id) {
-        case id_signalrgb_qmk_version:{
+    if (g_signalrgb_enabled){
+        // openRGB
+        switch (*command_id) {
+            case id_signalrgb_qmk_version:
+            {
                 get_qmk_version();
-                return;
-        }
+                break;      //return;
+            }
 
-        case id_signalrgb_protocol_version:{
+            case id_signalrgb_protocol_version:
+            {
                 get_signalrgb_protocol_version();
-                return;
-        }
+                break;
+            }
 
-        case id_signalrgb_unique_identifier:{
+            case id_signalrgb_unique_identifier:
+            {
                 get_unique_identifier();
-                return;
-        }
+                break;
+            }
 
-        case id_signalrgb_stream_leds:{
+            case id_signalrgb_stream_leds: 
+            {
                 led_streaming(data);
-                return;
-        }
+                break;
+            }
 
-        case id_signalrgb_effect_enable:{
+            case id_signalrgb_effect_enable: 
+            {
                 signalrgb_mode_enable();
-                return;
-        }
+                break;
+            }
 
-        case id_signalrgb_effect_disable:{
+            case id_signalrgb_effect_disable: 
+            {
                 signalrgb_mode_disable();
-                return;
-        }
+                break;
+            }
 
-        case id_signalrgb_total_leds:{
+            case id_signalrgb_total_leds:
+            {
                 signalrgb_total_leds();
-                return;
-        }
+                break;
+            }
 
-        case id_signalrgb_firmware_type:{
+            case id_signalrgb_firmware_type:
+            {
                 signalrgb_firmware_type();
-                return;
+                break;
+            }
+            
         }
+        return;
     }
 #endif
  //via HID command
@@ -570,7 +492,8 @@ uint8_t *command_data = &(data[1]);
                     break;
                 }*/
                 default: {
-                    raw_hid_receive_kb(data, length);   //变更
+                    //*command_id = id_unhandled;     //变更
+                    via_custom_value_command_kb(data, length);   
                     break;
                 }
             }
@@ -589,7 +512,8 @@ uint8_t *command_data = &(data[1]);
                     break;
                 }
                 default: {
-                    raw_hid_receive_kb(data, length);   //变更
+                    //*command_id = id_unhandled;     
+                    via_custom_value_command_kb(data, length);   //变更
                     break;
                 }
             }
@@ -621,7 +545,7 @@ uint8_t *command_data = &(data[1]);
                         via_qmk_rgb_matrix_set_value(command_data);
             #endif
             #if defined(VIA_CUSTOM_LIGHTING_ENABLE)
-                        raw_hid_receive_kb(data, length);
+                        via_custom_value_command_kb(data, length);  //raw_hid_receive_kb(data, length);
             #endif
             #if !defined(VIA_QMK_BACKLIGHT_ENABLE) && !defined(VIA_QMK_RGBLIGHT_ENABLE) && !defined(VIA_CUSTOM_LIGHTING_ENABLE) && !defined(VIA_QMK_RGB_MATRIX_ENABLE)
                         // Return the unhandled state
@@ -640,7 +564,7 @@ uint8_t *command_data = &(data[1]);
                         via_qmk_rgb_matrix_get_value(command_data);
             #endif
             #if defined(VIA_CUSTOM_LIGHTING_ENABLE)
-                        raw_hid_receive_kb(data, length);
+                        via_custom_value_command_kb(data, length);  //raw_hid_receive_kb(data, length);
             #endif
             #if !defined(VIA_QMK_BACKLIGHT_ENABLE) && !defined(VIA_QMK_RGBLIGHT_ENABLE) && !defined(VIA_CUSTOM_LIGHTING_ENABLE) && !defined(VIA_QMK_RGB_MATRIX_ENABLE)
                         // Return the unhandled state
@@ -659,7 +583,7 @@ uint8_t *command_data = &(data[1]);
                         eeconfig_update_rgb_matrix();
             #endif
             #if defined(VIA_CUSTOM_LIGHTING_ENABLE)
-                        raw_hid_receive_kb(data, length);
+                        via_custom_value_command_kb(data, length);  //raw_hid_receive_kb(data, length);
             #endif
             #if !defined(VIA_QMK_BACKLIGHT_ENABLE) && !defined(VIA_QMK_RGBLIGHT_ENABLE) && !defined(VIA_CUSTOM_LIGHTING_ENABLE) && !defined(VIA_QMK_RGB_MATRIX_ENABLE)
                         // Return the unhandled state
@@ -818,10 +742,9 @@ void via_qmk_backlight_set_value(uint8_t *data) {
     }
 }
 
-/*变更点
 void via_qmk_backlight_save(void) {
     eeconfig_update_backlight_current();
-}*/
+}
 
 #endif // BACKLIGHT_ENABLE
 
@@ -830,7 +753,7 @@ void via_qmk_backlight_save(void) {
     #        define RGBLIGHT_LIMIT_VAL 255
     #    endif
 
-    /*变更点
+    
     void via_qmk_rgblight_command(uint8_t *data, uint8_t length) {
         // data = [ command_id, channel_id, value_id, value_data ]
         uint8_t *command_id        = &(data[0]);
@@ -854,7 +777,7 @@ void via_qmk_backlight_save(void) {
                 break;
             }
         }
-    }*/
+    }
 
     void via_qmk_rgblight_get_value(uint8_t *data) {
         // data = [ value_id, value_data ]
@@ -912,17 +835,16 @@ void via_qmk_backlight_save(void) {
     }
  }
 
-    /*变更点
     void via_qmk_rgblight_save(void) {
         eeconfig_update_rgblight_current();
-    }*/
+    }
 
 #endif // QMK_RGBLIGHT_ENABLE
 
 /*变更点*/
 #if defined(VIA_QMK_RGB_MATRIX_ENABLE)  //#if defined(RGB_MATRIX_ENABLE)
 
-/*void via_qmk_rgb_matrix_command(uint8_t *data, uint8_t length) {
+void via_qmk_rgb_matrix_command(uint8_t *data, uint8_t length) {
     // data = [ command_id, channel_id, value_id, value_data ]
     uint8_t *command_id        = &(data[0]);
     uint8_t *value_id_and_data = &(data[2]);
@@ -945,8 +867,8 @@ void via_qmk_backlight_save(void) {
             break;
         }
     }
-}*/
-//修改开始
+}
+/*//修改开始
 #    if !defined(RGB_MATRIX_MAXIMUM_BRIGHTNESS) || RGB_MATRIX_MAXIMUM_BRIGHTNESS > UINT8_MAX
 #        undef RGB_MATRIX_MAXIMUM_BRIGHTNESS
 #        define RGB_MATRIX_MAXIMUM_BRIGHTNESS UINT8_MAX
@@ -985,7 +907,7 @@ static uint8_t speed_to_rgblight(uint8_t rgb_matrix_speed) {
     } else {
         return 3;
     }
-}//修改结束
+}//修改结束*/
 
 void via_qmk_rgb_matrix_get_value(uint8_t *data) {
     // data = [ value_id, value_data ]
@@ -1042,10 +964,9 @@ void via_qmk_rgb_matrix_set_value(uint8_t *data) {
     }
 }
 
-/*变更点
 void via_qmk_rgb_matrix_save(void) {
     eeconfig_update_rgb_matrix();
-}*/
+}
 
 #endif // RGB_MATRIX_ENABLE
 
@@ -1122,9 +1043,9 @@ void via_qmk_led_matrix_set_value(uint8_t *data) {
     }
 }
 
-/*变更点void via_qmk_led_matrix_save(void) {
+void via_qmk_led_matrix_save(void) {
     eeconfig_update_led_matrix();
-}*/
+}
 
 #endif // LED_MATRIX_ENABLE
 

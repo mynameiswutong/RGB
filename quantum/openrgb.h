@@ -15,7 +15,7 @@
  */
 
 #pragma once
-#include "openrgb.c"
+#include <color.h>
 // This is changed only when the command IDs change,
 // so OpenRGB can detect compatible firmware.
 #define OPENRGB_PROTOCOL_VERSION 0xD
@@ -40,23 +40,8 @@ enum openrgb_responses {
     OPENRGB_SUCCESS        = 50,
     OPENRGB_END_OF_MESSAGE = 100,
 };
-/*#define OPENRGB_GET_PROTOCOL_VERSION   1
-#define OPENRGB_GET_QMK_VERSION        2
-#define OPENRGB_GET_DEVICE_INFO        3
-#define OPENRGB_GET_MODE_INFO          4
-#define OPENRGB_GET_LED_INFO           5
-#define OPENRGB_GET_ENABLED_MODES      6
 
-#define OPENRGB_SET_MODE               7
-#define OPENRGB_DIRECT_MODE_SET_SINGLE_LED 8
-#define OPENRGB_DIRECT_MODE_SET_LEDS   9
-
-#define OPENRGB_FAILURE                25
-#define OPENRGB_SUCCESS                50
-#define OPENRGB_END_OF_MESSAGE         100*/
-
-
-extern RGB g_openrgb_direct_mode_colors[DRIVER_LED_TOTAL];
+extern RGB g_openrgb_direct_mode_colors[RGB_MATRIX_LED_COUNT];
 
 void openrgb_get_protocol_version(void);
 void openrgb_get_qmk_version(void);
