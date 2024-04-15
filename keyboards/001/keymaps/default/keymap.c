@@ -70,7 +70,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     LAYOUT(
     QK_BOOT, KC_MUTE,  KC_VOLD,  KC_VOLU,  _______,  KC_MPRV,  KC_MPLY,  KC_MNXT,  _______,  _______,  KC_CALC,  KC_BRIU,  KC_BRID,  _______,  _______,  _______,  _______,  _______,  _______,
-    _______, RGB_M_R,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,            _______,  _______,  _______,  _______,  _______,
+    RGB_M_R, _______,  OP_MOD ,  SR_MOD ,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,            _______,  _______,  _______,  _______,  _______,
     _______,      _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  RGB_TOG,  _______,  RGB_HUD,  RGB_HUI,       _______,  _______,  _______,  _______,  _______,
     _______,        _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  RGB_SAD,  RGB_SAI,               _______,  _______,  _______,  _______,
     _______,            _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  RGB_SPD,  RGB_SPI,           _______,  RGB_VAI,  _______,  _______,  _______,  _______,
@@ -91,29 +91,30 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     //static uint32_t key_timer;
 
     switch (keycode) {
-        case OP_MOD:{
+        case OP_MOD:
             if (record->event.pressed) {
                 via_openrgb_enabled();
             }
             return false;
-        }
-        case SR_MOD:{
+        
+        case SR_MOD:
             if (record->event.pressed) {
             #ifdef SIGNALRGB_SUPPORT_ENABLE
                 via_signalrgb_enabled();
             #endif
             }
             return false;
-        }
-        case RGB_MOD:{
+        
+        case RGB_MOD:
             if (record->event.pressed) {
-                via_openrgb_disbled();
-                rgb_matrix_step_noeeprom();
+                via_openrgb_disabled();
+                //via_signalrgb_disabled();
+                //rgb_matrix_mode_noeeprom(RGB_MATRIX_CYCLE_LEFT_RIGHT);
+                rgb_matrix_step_noeeprom();     //Change the mode to the next RGB animation in the list of enabled RGB animations
             }
             return false;
-        }
-        return false;
-        default:
-            return true; //Process all other keycodes normally
+        
     }
+
+    return true; //处理其他按键建码
 }

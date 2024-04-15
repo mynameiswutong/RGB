@@ -1,7 +1,6 @@
 #pragma once
 
 #define CAPS_LOCK_LED_INDEX  70
-#define DRIVER_LED_TOTAL 100
 #ifdef OPENRGB_ENABLE
     #define OPENRGB_DIRECT_MODE_USE_UNIVERSAL_BRIGHTNESS
 #endif

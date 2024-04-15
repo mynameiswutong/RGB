@@ -1,4 +1,4 @@
-//#include "quantum/openrgb.c"
+
 #ifdef OPENRGB_ENABLE
 RGB_MATRIX_EFFECT(OPENRGB_DIRECT)
 #   ifdef RGB_MATRIX_CUSTOM_EFFECT_IMPLS
@@ -25,7 +25,7 @@ bool OPENRGB_DIRECT(effect_params_t* params) {
         );
         #endif
     }
-    return rgb_matrix_check_finished_leds(led_max);
+    return led_max < RGB_MATRIX_LED_COUNT;
 }
 #   endif
 #endif

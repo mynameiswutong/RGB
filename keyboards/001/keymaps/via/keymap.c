@@ -1,11 +1,13 @@
 #include QMK_KEYBOARD_H
+#include "quantum.h"
+//#include "print.h"
 
 enum custom_keycodes {
     OP_MOD = SAFE_RANGE, // openRGB toggle 0x5db1
     SR_MOD, //0x5db2
-    //SW_RMOD
+    SW_RMOD
 };
-#define DRIVER_LED_TOTAL 100
+
 /*
 #define KC_MCTL KC_MISSION_CONTROL
 #define KC_LPAD KC_LAUNCHPAD
@@ -70,12 +72,12 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     KC_LCTL,      KC_LGUI,    KC_LALT,                        KC_SPC,                                     KC_RALT,  MO(1),   KC_RCTL,  KC_LEFT,  KC_DOWN,   KC_RGHT,  KC_P0,    KC_PDOT),
 
     LAYOUT(
-    QK_BOOT, KC_MUTE,  KC_VOLD,  KC_VOLU,  _______,  KC_MPRV,  KC_MPLY,  KC_MNXT,  _______,  _______,  KC_CALC,  KC_BRIU,  KC_BRID,  _______,  _______,  _______,  _______,  OP_MOD ,  SR_MOD ,
-    _______, RGB_M_R,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,            _______,  _______,  _______,  _______,  _______,
+    QK_BOOT, KC_MUTE,  KC_VOLD,  KC_VOLU,  _______,  KC_MPRV,  KC_MPLY,  KC_MNXT,  _______,  _______,  KC_CALC,  KC_BRIU,  KC_BRID,  _______,  _______,  _______,  _______,  _______,  _______,  
+    RGB_M_R, _______,  OP_MOD ,  SR_MOD ,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,            _______,  _______,  _______,  _______,  _______,
     _______,      _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  RGB_TOG,  _______,  RGB_HUD,  RGB_HUI,       _______,  _______,  _______,  _______,  _______,
     _______,        _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  RGB_SAD,  RGB_SAI,               _______,  _______,  _______,  _______,
     _______,            _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  RGB_SPD,  RGB_SPI,           _______,  RGB_VAI,  _______,  _______,  _______,  _______,
-    _______,    _______,    _______,                     _______,                                      _______,  _______,  _______,  RGB_MOD, RGB_VAD,  RGB_RMOD, _______,  _______),
+    _______,    _______,    _______,                     SW_RMOD,                                      _______,  _______,  _______,  RGB_MOD, RGB_VAD,  RGB_RMOD, _______,  _______),
 };
 
 bool rgb_matrix_indicators_kb(void) {
@@ -88,6 +90,7 @@ bool rgb_matrix_indicators_kb(void) {
     return false;
 };
 
+/*
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     //static uint32_t key_timer;
 
@@ -109,7 +112,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case RGB_MOD:
             if (record->event.pressed) {
                 via_openrgb_disabled();
-                via_signalrgb_disabled();
+                //via_signalrgb_disabled();
+                //rgb_matrix_mode_noeeprom(RGB_MATRIX_CYCLE_LEFT_RIGHT);
                 rgb_matrix_step_noeeprom();     //Change the mode to the next RGB animation in the list of enabled RGB animations
             }
             return false;
@@ -117,9 +121,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     }
 
     return true; //处理其他按键建码
-}
+};
+*/
 
-/*
+/*extern*/ uint8_t is_orgb_mode;
+/*extern*/ uint8_t is_snrgb_mode;
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     static uint8_t sw_rmod_press_count = 0;
 
@@ -130,22 +137,28 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
                 switch (sw_rmod_press_count) { // 根据计数确定触发的功能
                     case 1:
-                    #ifdef OPENRGB_ENABLE
-                        via_openrgb_enabled(); // 第一次按下触发 OP_MOD
-                    #endif
-                        break;
+                        #ifdef OPENRGB_ENABLE
+                            uprintf("OpenRGB mod\n");
+                            rgb_matrix_mode_noeeprom(RGB_MATRIX_OPENRGB_DIRECT);    //Set OPENRGB_DIRECT mode, (not written to EEPROM)
+                            is_orgb_mode = 1;
+                        #endif
+                    break;
 
                     case 2:
-                    #ifdef SIGNALRGB_SUPPORT_ENABLE
-                        via_signalrgb_enabled(); // 第二次按下触发 SR_MOD
-                    #endif
-                        break;
-
+                        
+                            uprintf("SignalRGB mod\n");
+                            is_orgb_mode = 0;
+                            rgb_matrix_mode_noeeprom(RGB_MATRIX_SIGNALRGB);     //Set SIGNALRGB mode, (not written to EEPROM)
+                            is_snrgb_mode = 1;
+                        
+                    break;
+                    
                     case 3:
-                        via_openrgb_disabled(); // 第三次按下触发 RGB_MOD
-                        via_signalrgb_disabled();
-                        rgb_matrix_step_noeeprom();
-                        break;
+                        uprintf("RGB mod\n");
+                        is_orgb_mode = 0;
+                        is_snrgb_mode = 0;
+                        rgb_matrix_mode_noeeprom(RGB_MATRIX_DEFAULT_MODE);     //Change the mode to the next RGB animation in the list of enabled RGB animations
+                    break;
                 }
 
                 if (sw_rmod_press_count >= 3) {
@@ -157,4 +170,4 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
     return true; // 处理其他按键建码
 }
-*/
+

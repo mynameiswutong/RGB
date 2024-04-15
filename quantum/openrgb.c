@@ -25,16 +25,17 @@
 #include "string.h"
 #include <color.h>
 
+
 #if !defined(OPENRGB_DIRECT_MODE_STARTUP_RED)
 #    define OPENRGB_DIRECT_MODE_STARTUP_RED 0
 #endif
 
 #if !defined(OPENRGB_DIRECT_MODE_STARTUP_GREEN)
-#    define OPENRGB_DIRECT_MODE_STARTUP_GREEN 0
+#    define OPENRGB_DIRECT_MODE_STARTUP_GREEN 255
 #endif
 
 #if !defined(OPENRGB_DIRECT_MODE_STARTUP_BLUE)
-#    define OPENRGB_DIRECT_MODE_STARTUP_BLUE 255
+#    define OPENRGB_DIRECT_MODE_STARTUP_BLUE 0
 #endif
 
 RGB g_openrgb_direct_mode_colors[RGB_MATRIX_LED_COUNT] = {[0 ... RGB_MATRIX_LED_COUNT - 1] = {OPENRGB_DIRECT_MODE_STARTUP_GREEN, OPENRGB_DIRECT_MODE_STARTUP_RED, OPENRGB_DIRECT_MODE_STARTUP_BLUE}};
@@ -164,8 +165,8 @@ static const uint8_t openrgb_rgb_matrix_effects_indexes[]= {
 };
 static uint8_t raw_hid_buffer[RAW_EPSIZE];
 
-uint8_t is_orgb_mode = 1;
-
+uint8_t is_orgb_mode = 0;
+static uint8_t GET_LED_INFO = 0;
 void orgb_raw_hid_receive(uint8_t *data, uint8_t length) {//void raw_hid_receive(uint8_t *data, uint8_t length) {
     switch (*data) {
         case OPENRGB_GET_PROTOCOL_VERSION:
@@ -182,6 +183,8 @@ void orgb_raw_hid_receive(uint8_t *data, uint8_t length) {//void raw_hid_receive
             break;
         case OPENRGB_GET_LED_INFO:
             openrgb_get_led_info(data);
+            GET_LED_INFO++;
+            uprintf("cishu: %d\n",GET_LED_INFO);
             break;
         case OPENRGB_GET_ENABLED_MODES:
             openrgb_get_enabled_modes();
@@ -191,9 +194,11 @@ void orgb_raw_hid_receive(uint8_t *data, uint8_t length) {//void raw_hid_receive
             openrgb_set_mode(data);
             break;
         case OPENRGB_DIRECT_MODE_SET_SINGLE_LED:
+            uprintf("DIRECT_MODE_SET_SINGLE_LED\n");
             openrgb_direct_mode_set_single_led(data);
             break;
         case OPENRGB_DIRECT_MODE_SET_LEDS:
+            uprintf("DIRECT_MODE_SET_LEDS\n");
             openrgb_direct_mode_set_leds(data);
             break;
     }
@@ -201,6 +206,17 @@ void orgb_raw_hid_receive(uint8_t *data, uint8_t length) {//void raw_hid_receive
     if (*data != OPENRGB_DIRECT_MODE_SET_LEDS) {
         raw_hid_buffer[RAW_EPSIZE - 1] = OPENRGB_END_OF_MESSAGE;
         raw_hid_send(raw_hid_buffer, RAW_EPSIZE);
+
+        /*if (raw_hid_buffer[0] == OPENRGB_GET_LED_INFO){
+            uprintf("\nKAISHI\n");
+            wait_ms(200);
+            for (uint8_t i = 0; i < 9; i++) {
+                uprintf("LED Index: %d, X: %d, Y: %d, Keycode: %d\n", i, raw_hid_buffer[i * 7 + 1], raw_hid_buffer[i * 7 + 2], raw_hid_buffer[i * 7 + 7]);
+                wait_ms(300);
+            }
+        };*/
+
+
         memset(raw_hid_buffer, 0x00, RAW_EPSIZE);
     }
 }
@@ -246,7 +262,6 @@ void openrgb_get_device_info(void) {
 }
 void openrgb_get_mode_info(void) {
     const HSV hsv_color = rgb_matrix_get_hsv();
-
     raw_hid_buffer[0] = OPENRGB_GET_MODE_INFO;
     raw_hid_buffer[1] = rgb_matrix_get_mode();
     raw_hid_buffer[2] = rgb_matrix_get_speed();
@@ -255,10 +270,11 @@ void openrgb_get_mode_info(void) {
     raw_hid_buffer[5] = hsv_color.v;
 }
 extern uint16_t keycode_at_keymap_location_raw(uint8_t layer_num, uint8_t row, uint8_t column);
+
 void openrgb_get_led_info(uint8_t *data) {
     const uint8_t first_led   = data[1];
     const uint8_t number_leds = data[2];
-
+    uprintf("\nLEDCOUNT: %d, FIRST: %d\n",number_leds,first_led);
     raw_hid_buffer[0] = OPENRGB_GET_LED_INFO;
 
     for (uint8_t i = 0; i < number_leds; i++) {
@@ -298,8 +314,15 @@ void openrgb_get_led_info(uint8_t *data) {
         }
         else {
             raw_hid_buffer[data_idx + 7] = keycode_at_keymap_location_raw(0, row, col);     //pgm_read_byte(&keymaps[0][row][col]);
+
+        // 输出 LED 的索引、x、y 以及对应的键盘矩阵的行和列
+        uprintf("LEDIndex: %d; x: %d, y: %d; %d[%d, %d]\n", led_idx, g_led_config.point[led_idx].x, g_led_config.point[led_idx].y, keycode_at_keymap_location_raw(0, row, col), row, col);
+        wait_ms(150);// 延迟800毫秒，可以根据实际情况调整延迟时间
+
         }
+
     }
+
 }
 void openrgb_get_enabled_modes(void) {
     raw_hid_buffer[0] = OPENRGB_GET_ENABLED_MODES;
@@ -334,7 +357,6 @@ void openrgb_set_mode(uint8_t *data) {
         rgb_matrix_set_speed_noeeprom(speed);
         rgb_matrix_sethsv_noeeprom(h, s, v);
     }
-
     raw_hid_buffer[RAW_EPSIZE - 2] = OPENRGB_SUCCESS;
 }
 void openrgb_direct_mode_set_single_led(uint8_t *data) {

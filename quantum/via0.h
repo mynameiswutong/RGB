@@ -59,7 +59,7 @@
 
 // This is changed only when the command IDs change,
 // so VIA Configurator can detect compatible firmware.
-#define VIA_PROTOCOL_VERSION 0x000C
+#define VIA_PROTOCOL_VERSION 0x000C /*0x000A*/
 
 // This is a version number for the firmware for the keyboard.
 // It can be used to ensure the VIA keyboard definition and the firmware
@@ -78,6 +78,9 @@ enum via_command_id {
     id_dynamic_keymap_get_keycode           = 0x04,
     id_dynamic_keymap_set_keycode           = 0x05,
     id_dynamic_keymap_reset                 = 0x06,
+    id_lighting_set_value                   = 0x07,
+    id_lighting_get_value                   = 0x08,
+    id_lighting_save                        = 0x09,
     id_custom_set_value                     = 0x07,
     id_custom_get_value                     = 0x08,
     id_custom_save                          = 0x09,
@@ -93,8 +96,6 @@ enum via_command_id {
     id_dynamic_keymap_set_buffer            = 0x13,
     id_dynamic_keymap_get_encoder           = 0x14,
     id_dynamic_keymap_set_encoder           = 0x15,
-//====================SignalRGB Start=======================//
-
     id_signalrgb_qmk_version                = 0x21,
     id_signalrgb_protocol_version           = 0x22,
     id_signalrgb_unique_identifier          = 0x23,
@@ -103,33 +104,29 @@ enum via_command_id {
     id_signalrgb_effect_disable             = 0x26,
     id_signalrgb_total_leds                 = 0x27,
     id_signalrgb_firmware_type              = 0x28,
-    
-//====================SignalRGB End=======================//
     id_unhandled                            = 0xFF,
 };
-//====================SignalRGB Start=======================//
 
-enum signalrgb_responses {
-    PROTOCOL_VERSION_BYTE_1 = 1,
-    PROTOCOL_VERSION_BYTE_2 = 0,
-    PROTOCOL_VERSION_BYTE_3 = 5,
-    DEVICE_UNIQUE_IDENTIFIER_BYTE_1 = 0,
-    DEVICE_UNIQUE_IDENTIFIER_BYTE_2 = 0,
-    DEVICE_UNIQUE_IDENTIFIER_BYTE_3 = 0,
-    FIRMWARE_TYPE_BYTE = 2, 
-    DEVICE_ERROR_LED_BOUNDS = 253,
-    DEVICE_ERROR_LED_COUNT = 254
-};
+// enum signalrgb_responses {
+//     PROTOCOL_VERSION_BYTE_1 = 1,
+//     PROTOCOL_VERSION_BYTE_2 = 0,
+//     PROTOCOL_VERSION_BYTE_3 = 4,
+//     QMK_VERSION_BYTE_1 = 0,
+//     QMK_VERSION_BYTE_2 = 17,
+//     QMK_VERSION_BYTE_3 = 5,
+//     DEVICE_UNIQUE_IDENTIFIER_BYTE_1 = 0,
+//     DEVICE_UNIQUE_IDENTIFIER_BYTE_2 = 0,
+//     DEVICE_UNIQUE_IDENTIFIER_BYTE_3 = 0,
+//     FIRMWARE_TYPE_BYTE = 2,
+//     DEVICE_ERROR_LEDS = 254,
+// };
 
 //Changelogs for Firmware Versions------------------------------------
 //V1.0.1 added detection for the total number of LEDs a board has. Plugins need a rewrite to make use of this change. Rewritten plugins will not function with older firmware.
 //V1.0.2 added another detection byte for which fork of SignalRGB firmware device is running. This means we can keep overlap Unique Identifiers between Sonix and Mainline.
 //V1.0.3 unifies the command IDs between Mainline, Sonix, and VIA. All commands have a 0x20 offset now.
 //V1.0.4 improves detection handling, and has a complete rewrite of the plugins. Also merges Mainline and VIA branches. VIA Branch is deprecated.
-//V1.0.5 adds support for RGBLight and adds proper bounds checking for leds to ensure we don't crash the firmware.
 
-
-//====================SignalRGB END=======================//
 
 enum via_keyboard_value_id {
     id_uptime              = 0x01,
@@ -139,6 +136,20 @@ enum via_keyboard_value_id {
     id_device_indication   = 0x05,
 };
 
+enum via_lighting_value {
+    // QMK BACKLIGHT
+    id_qmk_backlight_brightness = 0x09,
+    id_qmk_backlight_effect     = 0x0A,
+
+    // QMK RGBLIGHT
+    id_qmk_rgblight_brightness   = 0x80,
+    id_qmk_rgblight_effect       = 0x81,
+    id_qmk_rgblight_effect_speed = 0x82,
+    id_qmk_rgblight_color        = 0x83,
+};
+
+
+/*变更点
 enum via_channel_id {
     id_custom_channel         = 0,
     id_qmk_backlight_channel  = 1,
@@ -176,7 +187,61 @@ enum via_qmk_led_matrix_value {
 enum via_qmk_audio_value {
     id_qmk_audio_enable        = 1,
     id_qmk_audio_clicky_enable = 2,
+};*/
+
+
+// Can't use SAFE_RANGE here, it might change if someone adds
+// new values to enum quantum_keycodes.
+// Need to keep checking 0x5F10 is still in the safe range.
+// TODO: merge this into quantum_keycodes
+// Backlight keycodes are in range 0x5F00-0x5F0F
+enum via_keycodes {
+    FN_MO13 = 0x5F10,
+    FN_MO23,
+    MACRO00,
+    MACRO01,
+    MACRO02,
+    MACRO03,
+    MACRO04,
+    MACRO05,
+    MACRO06,
+    MACRO07,
+    MACRO08,
+    MACRO09,
+    MACRO10,
+    MACRO11,
+    MACRO12,
+    MACRO13,
+    MACRO14,
+    MACRO15,
 };
+
+enum user_keycodes {
+    USER00 = 0x5F80,
+    USER01,
+    USER02,
+    USER03,
+    USER04,
+    USER05,
+    USER06,
+    USER07,
+    USER08,
+    USER09,
+    USER10,
+    USER11,
+    USER12,
+    USER13,
+    USER14,
+    USER15,
+};
+
+//extern bool g_openrgb_enabled;
+//extern bool g_signalrgb_enabled;
+
+void via_openrgb_enabled(void);
+void via_openrgb_disabled(void);
+void via_signalrgb_enabled(void);
+void via_signalrgb_disabled(void);
 
 // Can be called in an overriding via_init_kb() to test if keyboard level code usage of
 // EEPROM is invalid and use/save defaults.
@@ -195,24 +260,36 @@ uint32_t via_get_layout_options(void);
 void     via_set_layout_options(uint32_t value);
 void     via_set_layout_options_kb(uint32_t value);
 
-//====================SignalRGB Start=======================//
-
-//Used to handle SignalRGB Compatibility
-void get_qmk_version(void);
-void get_signalrgb_protocol_version(void);
-void get_unique_identifier(void);
-void led_streaming(uint8_t *data);
-void signalrgb_mode_enable(void);
-void signalrgb_mode_disable(void);
-void signalrgb_total_leds(void);
-void signalrgb_firmware_type(void);
-
-//====================SignalRGB end=======================//
-
 // Used by VIA to tell a device to flash LEDs (or do something else) when that
 // device becomes the active device being configured, on startup or switching
 // between devices.
 void via_set_device_indication(uint8_t value);
+
+//Used to handle OpenRGB Compatibility
+//extern RGB g_openrgb_direct_mode_colors[DRIVER_LED_TOTAL];
+
+// void openrgb_get_protocol_version(void);
+// void openrgb_get_qmk_verwsion(void);
+// void openrgb_get_device_info(void);
+// void openrgb_get_mode_info(void);
+// void openrgb_get_led_info(uint8_t *data);
+// void openrgb_get_enabled_modes(void);
+
+// void openrgb_set_mode(uint8_t *data);
+// void openrgb_direct_mode_set_single_led(uint8_t *data);
+// void openrgb_direct_mode_set_leds(uint8_t *data);
+
+//Used to handle SignalRGB Compatibility
+
+// void get_qmk_version(void);
+// void get_signalrgb_protocol_version(void);
+// void get_unique_identifier(void);
+// void led_streaming(uint8_t *data);
+// void signalrgb_mode_enable(void);
+// void signalrgb_mode_disable(void);
+// void signalrgb_total_leds(void);
+// void signalrgb_firmware_type(void);
+
 
 // Called by QMK core to process VIA-specific keycodes.
 bool process_record_via(uint16_t keycode, keyrecord_t *record);
